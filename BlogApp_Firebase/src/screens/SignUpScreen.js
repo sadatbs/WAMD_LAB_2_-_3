@@ -91,18 +91,18 @@ const SignUpScreen = (props) => {
                         address : Address
                       })
                       .then(() => {
-                        setIsLoading(false);
+                        
                         alert("Account created successfully!");
                         console.log(userCreds.user);
                         props.navigation.navigate("SignIn");
                       })
                       .catch((error) => {
-                        setIsLoading(false);
+                        
                         alert(error);
                       });
                   })
                   .catch((error) => {
-                    setIsLoading(false);
+                   
                     alert(error);
                   });
               } else {

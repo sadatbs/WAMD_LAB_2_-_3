@@ -7,7 +7,7 @@ const InputCard = (props) => {
   return (
     <View>
       <Input
-        placeholder={props.Text}
+        placeholder={props.placeHolder}
         leftIcon={<Entypo name="pencil" size={24} color="black" />}
         onChangeText={(currentText) => {
           props.currentFunc(currentText);

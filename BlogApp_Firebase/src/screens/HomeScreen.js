@@ -9,6 +9,9 @@ import { AsyncStorage } from "react-native";
 import {getDataJSON,storeDataJSON} from "./../functions/AsyncStorageFunctions";
 import { Button } from "react-native-elements";
 import { AntDesign, FontAwesome } from "@expo/vector-icons";
+import * as firebase from 'firebase';
+import 'firebase/firestore';
+
 
 const HomeScreen = (props) => {
 
@@ -22,50 +25,30 @@ const HomeScreen = (props) => {
   const [icon, setIcon] = useState(["like2"]);
 
 
-
-  const getAllData = async () => {
-    let data = []
-    try {
-      data = await AsyncStorage.getAllKeys();
-      if (data != null) {
-        return data;
-      } else {
-        alert("No data with this key!");
-      }
-    } catch (error) {
-      alert(error);
-    }
-  };
-
-  const getAllPosts = async () => {
-    let keys = await getAllData();
-    let allposts = [];
-    try {
-        if (keys != null) {
-            for (let key of keys) {
-                if (key.includes('post')) {
-                    let post = await getDataJSON(key);
-                    allposts.push(post);
-                    
-                }
-            }
-            return allposts;
-        }
-    } catch (error) {
-        alert(error);
-    }
-}
-
   const loadPosts = async () => {
-    let response = await getAllPosts();
-    if (response != null) {
-      setPosts(response);
-    }
+    firebase
+      .firestore()
+      .collection("posts")
+      .orderBy("created_at", "desc")
+      .onSnapshot((querySnapshot) => {
+        let temp_posts = [];
+        querySnapshot.forEach((doc) => {
+          temp_posts.push({
+            id: doc.id,
+            data: doc.data(),
+          });
+        });
+        setPosts(temp_posts);
+        
+      })
+      .catch((error) => {
+        alert(error);
+      });
   };
 
   useEffect(() => {
     loadPosts();
-  }, [getAllPosts]);
+  }, []);
 
     return (
       <AuthContext.Consumer>
@@ -78,27 +61,27 @@ const HomeScreen = (props) => {
             />
             <Card>
               <StoreDataComponent
-                Text="What's On Your Mind ?"
+                placeHolder="What's On Your Mind ?"
                 currentFunc={setInput}
                 currentText={input}
-                pressFunction={async () => {
-                  setpostID(["post"+Math.floor(Math.random()*255)]);
-                  let currentPost = {
-                    username: auth.CurrentUser.username,
-                    name: auth.CurrentUser.name,
-                    postID: postID,
-                    post: input,
-                    likes: 0,
-                  };
-                  storeDataJSON(
-                    JSON.stringify(postID),
-                    JSON.stringify(currentPost)
-                  );
-            
-                  alert("Post Saved!")
-                  let UserData = await getDataJSON(JSON.stringify(postID));
-                  console.log(UserData);
-                  loadPosts();
+                pressFunction={()=>{
+                  firebase
+                  .firestore()
+                  .collection("posts")
+                  .add({
+                    userId: auth.CurrentUser.uid,
+                    body: input,
+                    author: auth.CurrentUser.displayName,
+                    created_at: firebase.firestore.Timestamp.now(),
+                    likes: [],
+                    comments: [],
+                  })
+                  .then(() => {
+                    alert("Post created Successfully!");
+                  })
+                  .catch((error) => {
+                    alert(error);
+                  });
                 }}
               />
             </Card>
@@ -107,13 +90,12 @@ const HomeScreen = (props) => {
               onRefresh={loadPosts}
               refreshing={loading}
               renderItem={function ({ item }) {
-                let data = JSON.parse(item)
                 return (
                   <View>
                     <Card containerStyle={styles.card__today}>
                       <PostCardComponent
-                        author={data.name}
-                        body={data.post}
+                        author={item.data.author}
+                        body={item.data.body}
                       />
                       <Card.Divider />
 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -138,7 +120,7 @@ const HomeScreen = (props) => {
             title=" Comment"
             onPress={() => {
               props.navigation.navigate("PostScreen", {
-                postId: data.postID,
+                postId: posts.id,
               });
             }}
           />
