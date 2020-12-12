@@ -19,7 +19,7 @@ const PostCard = (props) => {
           icon={{ name: "user", type: "font-awesome", color: "black" }}
           activeOpacity={1}
         />
-        <Text h4Style={{ padding: 10 }} h4>
+        <Text h3Style={{fontSize: 15}} h3 >
           {props.author}
         </Text>
       </View>

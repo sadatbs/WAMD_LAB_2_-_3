@@ -9,6 +9,7 @@ import { AsyncStorage } from "react-native";
 import {getDataJSON,storeDataJSON} from "./../functions/AsyncStorageFunctions";
 import { Button } from "react-native-elements";
 import { AntDesign, FontAwesome } from "@expo/vector-icons";
+import { TouchableOpacity } from "react-native-gesture-handler";
 import * as firebase from 'firebase';
 import 'firebase/firestore';
 
@@ -45,6 +46,15 @@ const HomeScreen = (props) => {
         alert(error);
       });
   };
+  const deletePosts = async (post) => {
+    //if(post.data.userId == auth.CurrentUser.uid){
+        await firebase.firestore().collection("posts").doc(post.id).delete().then(()=>{
+            alert("The Post Has Been Deleted!");
+        })
+   // }else{
+       // alert("Error In Deleting The post!!");
+    //}
+}
 
   useEffect(() => {
     loadPosts();
@@ -91,7 +101,10 @@ const HomeScreen = (props) => {
               refreshing={loading}
               renderItem={function ({ item }) {
                 return (
-                  <View>
+                  <TouchableOpacity onLongPress={ ()=> {
+                    deletePosts(item);
+                }}>
+                  
                     <Card containerStyle={styles.card__today}>
                       <PostCardComponent
                         author={item.data.author}
@@ -128,7 +141,8 @@ const HomeScreen = (props) => {
 
 
                     </Card>
-                  </View>
+                  
+                  </TouchableOpacity>
                 );
               }}
             />
