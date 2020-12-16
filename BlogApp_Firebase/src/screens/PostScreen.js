@@ -1,171 +1,158 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList, ScrollView, } from "react-native";
-import { Card } from "react-native-elements";
-import PostCardComponent from "../components/PostCardComponent";
-
-import { AuthContext } from "../providers/AuthProvider";
-
-import { getDataJSON, removeData, storeDataJSON } from "../functions/AsyncStorageFunctions";
-import HeaderComponent from "../components/HeaderComponent";
-import StoreDataComponent from "../components/StoreDataComponent";
-import { AsyncStorage } from "react-native";
-
+import { View, StyleSheet, FlatList, ImageBackground} from "react-native";
+import { Card, Button, Text, Avatar, Input , Header} from "react-native-elements";
+import * as firebase from "firebase";
+import "firebase/firestore";
+import { AuthContext} from "../providers/AuthProvider";
+import CommentCard from "../components/commentCardComponent";
+import { TouchableOpacity } from "react-native-gesture-handler";
 
 const PostScreen = (props) => {
-  const postID = props.route.params.postId;
-  const [posts, setPosts] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [input, setInput] = useState([]);
-  const [commentID, setCommentID]=useState(0);
+    let user = firebase.auth().currentUser;
+    let userid = user.uid;
+    let username = user.displayName;
+    let postId = props.route.params.postid;
+    const [Post, setPost] = useState({});
+    const [Comment, setComment] = useState("");
+    let dict = {};
+    let [totalComments, setTotalComments] = useState([]);
 
-
-  const loadIndividualPost = async () => {
-    let response = await getDataJSON(JSON.stringify(postID));
-    if (response != null) {
-      return response;
-    }
-  };
-
-  const getAllData = async () => {
-    let data = []
-    try {
-      data = await AsyncStorage.getAllKeys();
-      if (data != null) {
-        return data;
-      } else {
-        alert("No data with this key!");
-      }
-    } catch (error) {
-      alert(error);
-    }
-  };
-
-  const getAllComments = async () => {
-    let keys = await getAllData();
-    let allComments = [];
-    try {
-        if (keys != null) {
-            for (let key of keys) {
-                if (key.includes('comment')) {
-                  
-                    let comment = await getDataJSON(key);
-                    allComments.push(comment);
-                }
+    const postComment = async (userid)=>{
+        if(Comment != ""){
+            dict = {
+                "comment_poster_id": userid,
+                "commentor" : username,
+                "comment_body": Comment,
             }
-            return allComments;
+            const doc = firebase.firestore().collection('posts').doc(postId).update({
+                comments: firebase.firestore.FieldValue.arrayUnion(dict)
+            }).then(()=>{
+                alert("Comment posted successfully!");
+            });
+        }else{
+            alert("Field is empty!");
         }
-    } catch (error) {
-        alert(error);
     }
-  }
 
-  const loadComments = async () => {
+    const loadPost = async (postId)=>{
+        firebase.firestore().collection('posts').doc(postId).onSnapshot((doc) => {
+            let snap = doc.data();
+            setPost(snap);
+            setTotalComments(snap.comments)
+        });
+    }
+
+    const deleteComment = async (item) => {
+        if(user.uid == Post.userId || user.uid == item.comment_poster_id){
+            firebase.firestore().collection('posts').doc(postId).update({
+                comments: firebase.firestore.FieldValue.arrayRemove(item)
+            }).then(() => {
+                alert("Comment deleted successfully");
+            }).catch((error) => {
+                alert(error);
+            });
+        }
+        else{
+            alert("Comment couldn't be deleted!! authorization error!!");
+        }
+    }
+
+    useEffect(() => {
+        loadPost(postId);
+    }, []);
+
     
-    let response = await getAllComments();
-    if (response != null) {
-      setComments(response);
-    }
-  };
-
-  useEffect(() => {
-    loadIndividualPost().then((response) => {
-      setPosts(JSON.parse(response));
-    });
-    loadComments();
-  }, []);
-
     return (
-      <AuthContext.Consumer>
-        {(auth) => (
-          <View style={styles.viewStyle}>
-            <HeaderComponent
-              DrawerFunction={() => {
-                props.navigation.toggleDrawer();
-              }}
-            />
-
-            <Card>
-              <Card.Title>The post</Card.Title>
-              <PostCardComponent
-                author={posts.name}
-                body={posts.post}
-              />
-            </Card>
-            <Card>
-                <StoreDataComponent
-                  Text="Post a Comment"
-                  currentFunc={setInput}
-                  currentText={input}
-                  pressFunction={async () => {
-                      setCommentID(["comment" + Math.floor(Math.random()*255)]);
-                      let currentComment = {
-                        post: postID,
-                        reciever: posts.name,
-                        commentId:commentID,
-                        commneterID: auth.CurrentUser.username,
-                        commenter: auth.CurrentUser.name,
-                        comment: input,
-                      };
-                
-                      storeDataJSON(
-                        JSON.stringify(commentID),
-                        JSON.stringify(currentComment)
-                      );
-                
-                      alert("Comment Saved!")
-                      let UserData = await getDataJSON(JSON.stringify(commentID));
-                      console.log(UserData);
-                      loadComments();
-                  }}
-                />
-            </Card>
-
-            <ScrollView>
-            <Card>
-              <Card.Title>Comments for this post</Card.Title>
-              <FlatList
-                data={comments}
-                onRefresh={loadComments}
-                refreshing={loading}
-                renderItem={function ({ item }) {
-                  let data = JSON.parse(item);
-                  if (JSON.stringify(data.post) === JSON.stringify(postID)) {
-                    return (
-                      <View>
-                          <PostCardComponent
-                            author={data.commenter}
-                            body={data.comment}
-                          />
-                      </View>
-                    );
-                  }
-                }
-                }
-              />
-            </Card>
-            </ScrollView>
-
-          </View>
-        )}
-      </AuthContext.Consumer>
+        <AuthContext.Consumer>
+            {(auth) => (
+                <View style={styles.viewStyle}>
+                  <ImageBackground source={require("../../assets/wzuNYC.jpg")} style={styles.image}>
+                    <Header
+                        containerStyle={{
+                        backgroundColor: 'dodgerblue',
+                        }}
+                        centerComponent={{ text: "Local Blog", style: { color: "#fff", fontSize: 20 } }}
+                    />
+                    <Card>
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                            }}
+                        >
+                            <Avatar
+                                containerStyle={{ backgroundColor: 'lightblue' }}
+                                rounded
+                                size={45}
+                                icon={{ name: "user", type: "font-awesome", color: "dodgerblue" }}
+                                activeOpacity={1}
+                            />
+                            <Text h4Style={{fontSize:15, padding: 10 }} h4>
+                                {Post.author}
+                            </Text>
+                        </View>
+                        <Text
+                            style={{ fontSize: 13,
+                                paddingVertical: 10,
+                            }}
+                        >
+                            {Post.body}
+                        </Text>
+                        <Card.Divider />
+                        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                            <Input
+                                inputStyle={styles.inputStyle}
+                                placeholder='Comment'
+                                onChangeText={function (currentInput) {
+                                    setComment(currentInput);
+                                }}
+                            />
+                        </View>
+                        <Button type="solid" title="Post Comment"
+                        buttonStyle={{backgroundColor: 'dodgerblue'}}
+                            onPress={function () {
+                                postComment(userid);
+                            }}
+                        />
+                    </Card>  
+                    <FlatList
+                        data={totalComments}
+                        renderItem={({ item }) => {
+                            return (
+                                <TouchableOpacity onLongPress={()=>{
+                                    deleteComment(item);
+                                }}>
+                                    <View>
+                                        <CommentCard
+                                            commentor={item.commentor}
+                                            comment={item.comment_body}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        }}
+                    /> 
+                </ImageBackground>  
+                </View>
+            )}
+        </AuthContext.Consumer>
     );
- 
 };
 
 const styles = StyleSheet.create({
-  textStyle: {
-    fontSize: 30,
-    color: "blue",
-  },
-  viewStyle: {
-    flex: 1,
-  },
-  image: {
-    flex: 1,
-    resizeMode: "cover",
-    justifyContent: "center"
-  },
+    textStyle: {
+        fontSize: 30,
+        color: "blue",
+    },
+    viewStyle: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    image: {
+      flex: 1,
+      resizeMode: "cover",
+      justifyContent: "center"
+    },
 });
 
 export default PostScreen;

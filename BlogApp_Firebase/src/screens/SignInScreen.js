@@ -3,7 +3,6 @@ import { View, StyleSheet, ImageBackground, Dimensions } from "react-native";
 import { Input, Button, Card } from "react-native-elements";
 import { FontAwesome, Feather, AntDesign } from "@expo/vector-icons";
 import { AuthContext } from "../providers/AuthProvider";
-import { getDataJSON } from "../functions/AsyncStorageFunctions";
 import * as firebase from 'firebase';
 import 'firebase/firestore';
 

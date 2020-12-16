@@ -92,7 +92,7 @@ const SignUpScreen = (props) => {
                       })
                       .then(() => {
                         
-                        alert("Account created successfully!");
+                        alert(userCreds.user.uid);
                         console.log(userCreds.user);
                         props.navigation.navigate("SignIn");
                       })

@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList} from "react-native";
+import { View, StyleSheet, FlatList, ImageBackground} from "react-native";
 import { Card } from "react-native-elements";
 import { AuthContext } from "../providers/AuthProvider";
-import PostCardComponent from "./../components/PostCardComponent";
 import HeaderComponent from "./../components/HeaderComponent";
 import StoreDataComponent from "../components/StoreDataComponent";
-import { AsyncStorage } from "react-native";
-import {getDataJSON,storeDataJSON} from "./../functions/AsyncStorageFunctions";
-import { Button } from "react-native-elements";
-import { AntDesign, FontAwesome } from "@expo/vector-icons";
+import PostCard from '../components/PostCard'
 import { TouchableOpacity } from "react-native-gesture-handler";
 import * as firebase from 'firebase';
 import 'firebase/firestore';
@@ -17,11 +13,9 @@ import 'firebase/firestore';
 const HomeScreen = (props) => {
 
   const [posts, setPosts] = useState([]);
-  const [postID, setpostID] = useState(0);
+  const user = firebase.auth().currentUser;
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState([]);
-
-
   const [count, setCount] = useState(0);
   const [icon, setIcon] = useState(["like2"]);
 
@@ -47,23 +41,25 @@ const HomeScreen = (props) => {
       });
   };
   const deletePosts = async (post) => {
-    //if(post.data.userId == auth.CurrentUser.uid){
+    if(post.data.userId == user.uid){
         await firebase.firestore().collection("posts").doc(post.id).delete().then(()=>{
-            alert("The Post Has Been Deleted!");
+            alert("Post deleted successfully!");
         })
-   // }else{
-       // alert("Error In Deleting The post!!");
-    //}
+    }else{
+        alert("Post can't be deleted!");
+    }
 }
 
   useEffect(() => {
     loadPosts();
+  
   }, []);
 
     return (
       <AuthContext.Consumer>
         {(auth) => (
           <View style={styles.viewStyle}>
+         <ImageBackground source={require("../../assets/wzuNYC.jpg")} style={styles.image}>
             <HeaderComponent
               DrawerFunction={() => {
                 props.navigation.toggleDrawer();
@@ -87,7 +83,7 @@ const HomeScreen = (props) => {
                     comments: [],
                   })
                   .then(() => {
-                    alert("Post created Successfully!");
+                    alert(auth.CurrentUser.uid);
                   })
                   .catch((error) => {
                     alert(error);
@@ -101,51 +97,24 @@ const HomeScreen = (props) => {
               refreshing={loading}
               renderItem={function ({ item }) {
                 return (
-                  <TouchableOpacity onLongPress={ ()=> {
-                    deletePosts(item);
-                }}>
                   
-                    <Card containerStyle={styles.card__today}>
-                      <PostCardComponent
-                        author={item.data.author}
-                        body={item.data.body}
-                      />
-                      <Card.Divider />
-<View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Button
-            type="outline"
-            title={`Like (${count})`}
-            icon={<AntDesign name={icon} size={24} color="dodgerblue" />}
-            onPress={function () {
-              if (icon== "like2") {
-                setCount(count + 1);
-                setIcon("like1")
-              }
-              else {
-                setCount(count - 1);
-                setIcon("like2");
-              }
-            }}
-          />
-          <Button
-            type="outline"
-            icon={<FontAwesome name="comment" size={24} color="dodgerblue" />}
-            title=" Comment"
-            onPress={() => {
-              props.navigation.navigate("PostScreen", {
-                postId: posts.id,
-              });
-            }}
-          />
-        </View>
-
-
-                    </Card>
+                  <TouchableOpacity onLongPress={ ()=> {
+                    
+                   deletePosts(item);
+                }}>
+                  <PostCard
+                                            author={item.data.author}
+                                            body={item.data.body}
+                                            postId={item.id}
+                                            createdAt={item.data.created_at}
+                                            navigation={props.navigation}
+                                        />
                   
                   </TouchableOpacity>
                 );
               }}
             />
+            </ImageBackground>
           </View>
         )}
       </AuthContext.Consumer>
